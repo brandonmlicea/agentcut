@@ -1,4 +1,4 @@
-import { S, h, edit, emit, toast, api, find, assetOf, fmt, useFont, FONTS, kindOf } from "./state.js";
+import { S, h, edit, emit, toast, find, useFont, FONTS, kindOf } from "./state.js";
 
 export const FILLS = [
   ["Ink", "#111110"],
@@ -81,69 +81,34 @@ export async function upload(file) {
   const meta = await probe(file, kind);
   const q = new URLSearchParams({ name: file.name });
   for (const [k, v] of Object.entries(meta)) if (Number.isFinite(v)) q.set(k, v);
-  const pending = { id: `up-${Math.random()}`, name: file.name, kind, progress: 0 };
-  S.uploads = [...(S.uploads || []), pending];
-  emit("assets");
+  const note = toast(`Uploading ${file.name}…`);
   const asset = await new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", `/api/assets?${q}`);
     xhr.setRequestHeader("content-type", file.type);
-    xhr.upload.onprogress = (e) => ((pending.progress = e.loaded / e.total), emit("upload"));
+    xhr.upload.onprogress = (e) => note && (note.textContent = `Uploading ${file.name} · ${Math.round((e.loaded / e.total) * 100)}%`);
     xhr.onload = () => resolve(xhr.status < 300 ? JSON.parse(xhr.responseText) : (toast(`Upload failed: ${xhr.responseText}`, "bad"), null));
     xhr.onerror = () => resolve((toast("Upload failed", "bad"), null));
     xhr.send(file);
   });
-  S.uploads = S.uploads.filter((u) => u !== pending);
+  note?.remove();
   if (asset) S.assets.unshift(asset);
   emit("assets");
   return asset;
 }
 
-function card(a) {
-  const thumb =
-    a.kind === "video" ? h("video", { src: `/media/${a.id}#t=0.5`, preload: "metadata", muted: true }) : a.kind === "image" ? h("img", { src: `/media/${a.id}`, alt: "" }) : h("span", { className: "audio-thumb" }, "♪");
-  return h(
-    "div",
-    { className: "asset", draggable: true, id: `asset-${a.id}`, title: `${a.name}\nDrag onto the timeline or press +`, ondragstart: (e) => e.dataTransfer.setData("text/agentcut-asset", a.id) },
-    h("div", { className: `asset-thumb k-${a.kind}` }, thumb, a.duration ? h("em", {}, fmt(a.duration)) : ""),
-    h("div", { className: "asset-name" }, a.name),
-    h("button", { className: "asset-add", title: "Add at the playhead", onclick: () => edit([{ op: "add_clip", asset: a.id, start: at() }]) }, "+"),
-    h("button", {
-      className: "asset-del",
-      title: "Delete from library",
-      onclick: async () => {
-        if (!confirm(`Delete ${a.name} from your media?`)) return;
-        await api(`/api/assets/${a.id}`, { method: "DELETE" });
-        S.assets = S.assets.filter((x) => x.id !== a.id);
-        emit("assets");
-      },
-    }, "×"),
-  );
+export async function addFiles(files, start = at()) {
+  for (const file of files) {
+    const asset = await upload(file);
+    if (asset) await edit([{ op: "add_clip", asset: asset.id, start }]);
+  }
 }
 
 export function media() {
-  const input = h("input", { type: "file", multiple: true, accept: "video/*,audio/*,image/*", hidden: true, onchange: async () => { for (const f of input.files) await upload(f); input.value = ""; } });
-  const url = h("input", { type: "url", placeholder: "https://…/clip.mp4", required: true });
-  const importing = async (e) => {
-    e.preventDefault();
-    try {
-      const asset = await api("/api/import", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: url.value }) });
-      S.assets.unshift(asset);
-      url.value = "";
-      emit("assets");
-    } catch (err) {
-      toast(err.message, "bad");
-    }
-  };
-  const ups = (S.uploads || []).map((u) => h("div", { className: "asset pending" }, h("div", { className: "asset-thumb" }, h("i", { className: "bar", style: { width: `${Math.round(u.progress * 100)}%` } })), h("div", { className: "asset-name" }, `Uploading ${u.name}`)));
   return h(
     "div",
     { className: "pane", id: "pane-media" },
-    h("h2", {}, "Media"),
-    h("div", { className: "drop", ondragover: (e) => e.preventDefault(), ondrop: async (e) => { e.preventDefault(); for (const f of e.dataTransfer.files) await upload(f); } }, input, h("button", { className: "press", onclick: () => input.click() }, "Upload media"), h("p", {}, "or drop video, music and images here")),
-    h("form", { className: "inline", onsubmit: importing }, url, h("button", { className: "soft" }, "Import")),
-    section("Your media", S.assets.length || ups.length ? h("div", { className: "assets" }, ups, S.assets.map(card)) : h("p", { className: "muted" }, "Nothing yet. Upload a clip or a song to start.")),
-    section("Backgrounds", h("div", { className: "fills" }, FILLS.map(([name, fill]) => h("button", { className: "fill", title: `Add ${name} at the playhead`, draggable: true, ondragstart: (e) => e.dataTransfer.setData("text/agentcut-fill", fill), style: { background: css(fill) }, onclick: () => edit([{ op: "add_clip", fill, name, start: at() }]) }, h("span", {}, name))))),
+    h("div", { className: "fills" }, FILLS.map(([name, fill]) => h("button", { className: "fill", title: `Add ${name} at the playhead`, draggable: true, ondragstart: (ev) => ev.dataTransfer.setData("text/agentcut-fill", fill), style: { background: css(fill) }, onclick: () => edit([{ op: "add_clip", fill, name, start: at() }]) }, h("span", {}, name)))),
   );
 }
 

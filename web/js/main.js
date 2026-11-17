@@ -1,7 +1,7 @@
 import { S, on, emit, $, api, post, edit, undo, redo, find, seek, select, fmt, duration, toast, useFont } from "./state.js";
 import { toggle, draw } from "./player.js";
 import "./timeline.js";
-import { media, text, effects, upload } from "./panels.js";
+import { media, text, effects, addFiles } from "./panels.js";
 import { inspector } from "./inspector.js";
 import { look, exporter, mcp } from "./look.js";
 import { renderChat, menu } from "./chat.js";
@@ -76,9 +76,7 @@ desk.addEventListener("dragover", (e) => e.preventDefault());
 desk.addEventListener("drop", async (e) => {
   if (e.defaultPrevented || !e.dataTransfer.files.length) return;
   e.preventDefault();
-  S.tab = "media";
-  renderSide();
-  for (const f of e.dataTransfer.files) await upload(f);
+  await addFiles([...e.dataTransfer.files]);
 });
 
 async function open(pid) {
@@ -119,13 +117,13 @@ const askAgent = (text) => {
   if (text) box.value = text;
   box.focus();
 };
-$("#ask-agent").addEventListener("click", () => askAgent());
 $("#empty-ask").addEventListener("click", () => askAgent("Make a 15 second cut from my clips, put the music under it and add a title"));
-$("#empty-upload").addEventListener("click", () => {
-  S.tab = "media";
-  renderSide();
-  $("#pane-media input[type=file]").click();
+const files = $("#file-input");
+files.addEventListener("change", async () => {
+  await addFiles([...files.files]);
+  files.value = "";
 });
+for (const id of ["#empty-upload", "#add-media"]) $(id).addEventListener("click", () => files.click());
 
 $("#account").addEventListener("click", (e) =>
   menu(e.currentTarget, [["Sign out", async () => { await post("/auth/logout", {}); location.href = "/login"; }, "danger"]]),
@@ -140,8 +138,6 @@ on("project", () => {
   $("#stage-empty").hidden = duration() > 0;
 });
 on("select", renderSide);
-on("assets", () => S.tab === "media" && renderSide());
-on("upload", () => S.tab === "media" && renderSide());
 on("seek", () => {
   clock();
   if (S.tab === "clip" && !S.playing && !side.contains(document.activeElement)) renderSide();

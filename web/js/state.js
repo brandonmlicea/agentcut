@@ -24,6 +24,7 @@ export function toast(text, kind = "") {
   const item = h("div", { className: `toast ${kind}` }, text);
   box.append(item);
   setTimeout(() => item.remove(), 4200);
+  return item;
 }
 
 export async function api(path, opts = {}) {

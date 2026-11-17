@@ -1,11 +1,10 @@
 import { S, on, $, h, edit, find, select, seek, duration, kindOf, clamp, assetOf, emit } from "./state.js";
-import { upload } from "./panels.js";
+import { addFiles } from "./panels.js";
 
 const HEAD = 176;
 const root = $("#timeline");
 const scroller = h("div", { className: "tl-scroll", id: "tl-scroll" });
 const inner = h("div", { className: "tl-inner" });
-const line = h("div", { className: "tl-playhead", id: "tl-playhead" }, h("i"));
 const zoom = h("input", { type: "range", min: 12, max: 320, value: S.zoom, className: "tl-zoom", oninput: () => ((S.zoom = +zoom.value), render()) });
 root.append(
   h("div", { className: "tl-bar" }, h("span", { className: "tl-hint" }, "Drag to move or change layer · edges trim · S splits · Space plays"), h("label", { className: "tl-zoom-wrap" }, "Zoom", zoom)),
@@ -77,16 +76,13 @@ export function render() {
     h("div", { className: `tl-row k-${track.kind}${track.hidden ? " hidden" : ""}` }, head(track), h("div", { className: "lane", "data-track": track.id, onpointerdown: scrub, ondragover: (e) => e.preventDefault(), ondrop: (e) => drop(e, track) }, track.clips.map((c) => clipEl(track, c)))),
   );
   const empty = !rows.length && h("div", { className: "tl-empty", ondragover: (e) => e.preventDefault(), ondrop: (e) => drop(e, null) }, "Drop video, music or images here, or ask the agent on the left.");
-  inner.replaceChildren(h("div", { className: "tl-row tl-top" }, h("div", { className: "tl-corner" }), ruler(width)), ...rows, empty || "", line);
+  inner.replaceChildren(h("div", { className: "tl-row tl-top" }, h("div", { className: "tl-corner" }), ruler(width)), ...rows, empty || "");
   place();
 }
 
 function place() {
-  line.style.left = `${HEAD + px(S.time)}px`;
-  if (S.playing) {
-    const x = px(S.time);
-    if (x > scroller.scrollLeft + scroller.clientWidth - HEAD - 40) scroller.scrollLeft = x - 80;
-  }
+  const x = px(S.time);
+  if (S.playing && x > scroller.scrollLeft + scroller.clientWidth - HEAD - 40) scroller.scrollLeft = x - 80;
 }
 
 function timeAt(e) {
@@ -174,11 +170,7 @@ async function drop(e, track) {
   const target = track ? { track: track.id } : {};
   if (id) return edit([{ op: "add_clip", asset: id, start, ...(track && (assetOf(id)?.kind === "audio") === (track.kind === "audio") ? target : {}) }]);
   if (fill) return edit([{ op: "add_clip", fill, start, ...(track && track.kind !== "audio" ? target : {}) }]);
-  const files = [...e.dataTransfer.files];
-  for (const file of files) {
-    const asset = await upload(file);
-    if (asset) await edit([{ op: "add_clip", asset: asset.id, start }]);
-  }
+  await addFiles([...e.dataTransfer.files], start);
 }
 
 on("project", render);

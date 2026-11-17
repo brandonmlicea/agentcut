@@ -41,7 +41,6 @@
         <h1>Editor</h1>
         <span class="win-meta" id="win-meta"></span>
       </header>
-      <div class="agent-strip" id="agent-strip"><img src="/mark.svg" alt=""><span>Your agent edits this timeline from the chat.</span><button class="link" id="ask-agent">Ask your agent to make changes</button></div>
       <div class="win-body">
         <div class="side" id="side"></div>
         <div class="stage" id="stage">
@@ -63,6 +62,7 @@
               <button id="to-end" title="End (End)">⏭</button>
             </span>
             <span class="t-group right">
+              <button id="add-media" title="Add video, music or images at the playhead">+ Media</button>
               <button id="split" title="Split at playhead (S)">Split</button>
               <button id="delete" title="Delete clip (Del)">Delete</button>
               <button id="undo" title="Undo (Ctrl+Z)">↶</button>
@@ -76,6 +76,7 @@
   </main>
 </div>
 <div id="toast"></div>
+<input type="file" id="file-input" multiple accept="video/*,audio/*,image/*" hidden>
 <script type="module" src="/js/main.js"></script>
 </body>
 </html>
