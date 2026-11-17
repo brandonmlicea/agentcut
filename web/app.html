@@ -41,10 +41,18 @@
         <h1>Editor</h1>
         <span class="win-meta" id="win-meta"></span>
       </header>
+      <div class="agent-strip" id="agent-strip"><img src="/mark.svg" alt=""><span>Your agent edits this timeline from the chat.</span><button class="link" id="ask-agent">Ask your agent to make changes</button></div>
       <div class="win-body">
         <div class="side" id="side"></div>
         <div class="stage" id="stage">
-          <div class="frame"><canvas id="stage-canvas" width="1280" height="720"></canvas></div>
+          <div class="frame"><canvas id="stage-canvas" width="1280" height="720"></canvas>
+            <div class="stage-empty" id="stage-empty" hidden>
+              <span class="tile t-media"><svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.6l1.8 2h7.6a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="#fff"/></svg></span>
+              <h3>Start your video</h3>
+              <p>Upload footage, music or images, then edit by hand or ask your agent to build the cut.</p>
+              <span><button class="press" id="empty-upload">Upload media</button> <button class="soft" id="empty-ask">Ask your agent to make a cut</button></span>
+            </div>
+          </div>
           <div class="transport" id="transport">
             <span class="clock" id="clock">0:00.00 / 0:00.00</span>
             <span class="t-group">

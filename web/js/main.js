@@ -114,6 +114,19 @@ async function newProject() {
 }
 $("#new-project").addEventListener("click", newProject);
 
+const askAgent = (text) => {
+  const box = $("#prompt");
+  if (text) box.value = text;
+  box.focus();
+};
+$("#ask-agent").addEventListener("click", () => askAgent());
+$("#empty-ask").addEventListener("click", () => askAgent("Make a 15 second cut from my clips, put the music under it and add a title"));
+$("#empty-upload").addEventListener("click", () => {
+  S.tab = "media";
+  renderSide();
+  $("#pane-media input[type=file]").click();
+});
+
 $("#account").addEventListener("click", (e) =>
   menu(e.currentTarget, [["Sign out", async () => { await post("/auth/logout", {}); location.href = "/login"; }, "danger"]]),
 );
@@ -124,6 +137,7 @@ on("project", () => {
   document.title = `${S.project.name} · AgentCut`;
   renderSide();
   clock();
+  $("#stage-empty").hidden = duration() > 0;
 });
 on("select", renderSide);
 on("assets", () => S.tab === "media" && renderSide());

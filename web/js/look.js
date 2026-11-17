@@ -62,6 +62,13 @@ export function look() {
   );
 }
 
+function stats() {
+  const P = S.project;
+  const clips = P.tracks.reduce((n, t) => n + t.clips.length, 0);
+  const cell = (label, value) => h("div", {}, h("small", {}, label), h("b", {}, value));
+  return h("div", { className: "stats" }, cell("Length", fmt(duration())), cell("Clips", String(clips)), cell("Layers", String(P.tracks.filter((t) => t.kind !== "audio").length)), cell("Frame", `${P.width}×${P.height}`));
+}
+
 export function exporter() {
   const bar = h("i", { className: "bar" });
   const status = h("p", { className: "muted" }, `${S.project.width}×${S.project.height} at ${S.project.fps} fps · ${fmt(duration())}`);
@@ -82,7 +89,7 @@ export function exporter() {
     }
     e.target.disabled = false;
   };
-  return h("div", { className: "pane", id: "pane-export" }, h("h2", {}, "Export"), status, h("div", { className: "progress" }, bar), h("button", { className: "press", onclick: go }, "Export video"), link, h("p", { className: "muted" }, "The edit plays once with its sound to make the file: MP4 where the browser can, otherwise WebM."));
+  return h("div", { className: "pane", id: "pane-export" }, h("h2", {}, "Export"), stats(), status, h("div", { className: "progress" }, bar), h("button", { className: "press", onclick: go }, "Export video"), link, h("p", { className: "muted" }, "The edit plays once with its sound to make the file: MP4 where the browser can, otherwise WebM."));
 }
 
 export function mcp() {
