@@ -1,0 +1,11 @@
+CREATE TABLE users (id TEXT PRIMARY KEY, mcp_key TEXT, created INTEGER NOT NULL);
+CREATE INDEX users_mcp ON users(mcp_key);
+CREATE TABLE credentials (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, public_key TEXT NOT NULL, alg INTEGER NOT NULL, sign_count INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL);
+CREATE TABLE challenges (id TEXT PRIMARY KEY, user_id TEXT, created INTEGER NOT NULL);
+CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, created INTEGER NOT NULL, seen INTEGER NOT NULL);
+CREATE TABLE projects (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, data TEXT NOT NULL, updated INTEGER NOT NULL);
+CREATE INDEX projects_user ON projects(user_id, updated);
+CREATE TABLE assets (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, kind TEXT NOT NULL, mime TEXT NOT NULL, size REAL NOT NULL, duration REAL, width REAL, height REAL, created INTEGER NOT NULL);
+CREATE INDEX assets_user ON assets(user_id, created);
+CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, meta TEXT, created INTEGER NOT NULL);
+CREATE INDEX messages_project ON messages(project_id, id);

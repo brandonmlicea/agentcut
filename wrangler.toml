@@ -1,0 +1,25 @@
+name = "agentcut"
+main = "build/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[build]
+command = "worker-build --release"
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "agentcut"
+database_id = "11694493-e1ae-4f7c-8bdd-5e736f8e5562"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "agentcut"
+
+[[services]]
+binding = "STAR"
+service = "star"
+entrypoint = "ScaffoldBridge"

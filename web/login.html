@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · AgentCut</title>
+<link rel="icon" href="/mark.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 400 14px/1.5 "Inter", system-ui, sans-serif; color: #1f1f1e; background: #fbfbf8; display: grid; place-items: center; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  main { width: min(384px, 100% - 40px); text-align: center; margin-top: -8vh; }
+  .mark { width: 56px; height: 56px; border-radius: 15px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.16); }
+  h1 { margin: 18px 0 2px; font: 400 40px/1.1 "Instrument Serif", Georgia, serif; letter-spacing: -0.01em; }
+  .sub { margin: 0 0 30px; font-size: 16px; color: #5f5f59; }
+  #go { width: 100%; height: 50px; border: 0; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font: 500 15px "Inter", sans-serif; color: #fff; cursor: pointer; background: linear-gradient(180deg, #41413d 0%, #121211 100%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 0 0 1px #0d0d0c, 0 3px 8px rgb(0 0 0 / 0.25); }
+  #go:hover { background: linear-gradient(180deg, #4d4d48, #1b1b19); }
+  #go:disabled { opacity: 0.6; cursor: default; }
+  .alt { margin-top: 14px; border: 0; background: none; font-size: 13px; color: #5f5f59; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .note { margin: 26px auto 0; max-width: 300px; font-size: 12.5px; color: #5f5f59; }
+  #msg { min-height: 20px; margin-top: 14px; font-size: 13px; color: #8f1d12; }
+  .strip { position: fixed; left: 0; right: 0; bottom: 0; height: 64px; display: flex; gap: 6px; padding: 10px 0; background: #1b1b1a; overflow: hidden; }
+  .strip i { flex: none; width: 92px; border-radius: 6px; background: linear-gradient(135deg, #2b2b29, #3a3a37); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.05); }
+  .strip i:nth-child(5n + 2) { background: linear-gradient(135deg, #1337b4, #7fb2ff); }
+  .strip i:nth-child(7n + 4) { background: linear-gradient(135deg, #f7971e, #ffd200); }
+  .strip i:nth-child(6n + 5) { background: linear-gradient(135deg, #134e5e, #71b280); }
+  .strip::before, .strip::after { content: ""; position: absolute; left: 0; right: 0; height: 4px; background: repeating-linear-gradient(90deg, transparent 0 10px, #fbfbf8 10px 16px); opacity: 0.5; }
+  .strip::before { top: 3px; } .strip::after { bottom: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <img class="mark" src="/mark.svg" alt="">
+  <h1>AgentCut</h1>
+  <p class="sub">Edit video by talking to it</p>
+  <button id="go"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 7.65-7.65M15.5 7.5l2.5 2.5M18 5l2 2"/></svg><span>Continue with passkey</span></button>
+  <div id="msg" role="status"></div>
+  <button class="alt" id="alt"></button>
+  <p class="note">No email and no password. Your passkey lives on this device, and this device stays signed in.</p>
+</main>
+<div class="strip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<script>
+const KNOWN = "agentcut.passkey";
+const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64 = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+const msg = document.getElementById("msg");
+const go = document.getElementById("go");
+const alt = document.getElementById("alt");
+
+async function post(path, body) {
+  const res = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+
+async function register() {
+  const o = await post("/auth/options", { register: true });
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: unb64(o.challenge),
+    rp: { name: "AgentCut", id: o.rpId },
+    user: { id: unb64(o.user.id), name: o.user.name, displayName: o.user.displayName },
+    pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -8 }, { type: "public-key", alg: -257 }],
+    authenticatorSelection: { residentKey: "required", requireResidentKey: true, userVerification: "preferred" },
+    attestation: "none",
+    timeout: 120000,
+  } });
+  const r = cred.response;
+  await post("/auth/register", { id: cred.id, clientDataJson: b64(r.clientDataJSON), authenticatorData: b64(r.getAuthenticatorData()), publicKey: b64(r.getPublicKey()), alg: r.getPublicKeyAlgorithm() });
+}
+
+async function login() {
+  const o = await post("/auth/options", { register: false });
+  const cred = await navigator.credentials.get({ publicKey: { challenge: unb64(o.challenge), rpId: o.rpId, userVerification: "preferred", timeout: 120000 } });
+  const r = cred.response;
+  await post("/auth/login", { id: cred.id, clientDataJson: b64(r.clientDataJSON), authenticatorData: b64(r.authenticatorData), signature: b64(r.signature) });
+}
+
+async function run(first) {
+  msg.textContent = "";
+  go.disabled = alt.disabled = true;
+  try {
+    if (first === "login") {
+      try { await login(); } catch (e) {
+        if (e.name !== "NotAllowedError" && !/registered/.test(e.message)) throw e;
+        await register();
+      }
+    } else {
+      await register();
+    }
+    localStorage.setItem(KNOWN, "1");
+    location.replace("/");
+  } catch (e) {
+    msg.textContent = e.name === "NotAllowedError" ? "The passkey prompt was closed. Try again when you're ready." : e.message;
+  }
+  go.disabled = alt.disabled = false;
+}
+
+if (!window.PublicKeyCredential) {
+  msg.textContent = "This browser can't use passkeys. Try a current Chrome, Edge, Safari or Firefox.";
+  go.disabled = true;
+}
+const known = localStorage.getItem(KNOWN);
+alt.textContent = known ? "Make a new passkey instead" : "I already have a passkey";
+go.addEventListener("click", () => run(known ? "login" : "register"));
+alt.addEventListener("click", () => run(known ? "register" : "login"));
+</script>
+</body>
+</html>
