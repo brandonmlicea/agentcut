@@ -1,4 +1,5 @@
 import { S, h, edit, emit, toast, find, useFont, FONTS, kindOf } from "./state.js";
+import { stills } from "./agent.js";
 
 export const FILLS = [
   ["Ink", "#111110"],
@@ -94,6 +95,7 @@ export async function upload(file) {
   note?.remove();
   if (asset) S.assets.unshift(asset);
   emit("assets");
+  stills(asset);
   return asset;
 }
 

@@ -83,3 +83,47 @@ fn contrast_matches_known_pairs() {
     assert_eq!(again["passes"], true, "{again}");
     assert_eq!(contrast::check("oklch(0.5 0.1 250)", "rgb(255 255 255)", "AA", "foreground")["AA"], true);
 }
+
+#[test]
+fn reads_times_the_way_people_say_them() {
+    use crate::moment::{span, time};
+    assert_eq!(time("0:15"), Some(15.0));
+    assert_eq!(time("1:02.5"), Some(62.5));
+    assert_eq!(time("2m 3s"), Some(123.0));
+    assert_eq!(time("15 seconds"), Some(15.0));
+    assert_eq!(span("I really liked 0:15 to 0:17"), Some((15.0, 17.0)));
+    assert_eq!(span("from 15s to 17s"), Some((15.0, 17.0)));
+    assert_eq!(span("0:15-0:17"), Some((15.0, 17.0)));
+    assert_eq!(span("between 15 and 17 seconds please"), Some((15.0, 17.0)));
+    assert_eq!(span("the bit at 1:02"), Some((62.0, 62.0)));
+    assert_eq!(span("no time here"), None);
+}
+
+#[test]
+fn looks_at_a_moment_and_carries_its_style() {
+    let mut p = Project::default();
+    let made = ops(&mut p, json!([
+        { "op": "add_clip", "asset": "v1", "dur": 10 },
+        { "op": "add_clip", "asset": "v1", "start": 10, "dur": 10 },
+        { "op": "effect", "clip": "@0:05", "preset": "warm" },
+        { "op": "keyframe", "clip": "@0:05", "prop": "scale", "at": "0:04", "value": 1.0 },
+        { "op": "keyframe", "clip": "@0:05", "prop": "scale", "at": "0:06", "value": 1.2 },
+    ]));
+    assert!(made.errors.is_empty(), "{:?}", made.errors);
+    let normal = crate::moment::normalize(&p, json!({ "op": "split", "clip": "@0:12", "at": "0:13" })).unwrap();
+    assert_eq!(normal[0]["at"], json!(13.0));
+    assert_eq!(normal[0]["clip"], json!(p.tracks[0].clips[1].id));
+    let (report, stills) = crate::moment::look(&p, &library(), 4.0, 6.0);
+    let text = report.to_string();
+    assert!(text.contains("warm look"), "{text}");
+    assert!(text.contains("animates scale"), "{text}");
+    assert_eq!(stills.iter().map(|s| s.second).collect::<Vec<_>>(), vec![4, 5]);
+    let out = ops(&mut p, json!([{ "op": "match_style", "from": "0:04 to 0:06", "to": "0:14 to 0:18" }]));
+    assert!(out.errors.is_empty(), "{:?}", out.errors);
+    let second = &p.tracks[0].clips[1];
+    assert!((second.effects.sepia - 0.18).abs() < 1e-9);
+    let keys = &second.keyframes["scale"];
+    assert_eq!(keys.len(), 2);
+    assert!((keys[0].t - 4.0).abs() < 1e-6 && (keys[1].t - 8.0).abs() < 1e-6);
+    assert!((keys[1].v - 1.2).abs() < 1e-9);
+}

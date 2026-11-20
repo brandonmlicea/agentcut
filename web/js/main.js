@@ -3,10 +3,10 @@ import { toggle, draw } from "./player.js";
 import "./timeline.js";
 import { media, text, effects, addFiles } from "./panels.js";
 import { inspector } from "./inspector.js";
-import { look, exporter, mcp } from "./look.js";
-import { renderChat, menu } from "./chat.js";
+import { look, exporter } from "./look.js";
+import { renderAgent, menu, stills, restamp } from "./agent.js";
 
-const PANES = { media, text, clip: inspector, effects, look, export: exporter, mcp };
+const PANES = { media, text, clip: inspector, effects, look, export: exporter };
 const side = $("#side");
 
 function renderSide() {
@@ -84,7 +84,10 @@ async function open(pid) {
   Object.assign(S, { pid, project: r.project, past: [], future: [], selected: null, time: 0 });
   localStorage.setItem("agentcut.project", pid);
   useFont(S.project.font);
-  renderChat(r.messages);
+  renderAgent(r.messages);
+  restamp();
+  const used = new Set(S.project.tracks.flatMap((t) => t.clips.map((c) => c.asset)));
+  S.assets.filter((a) => used.has(a.id)).forEach(stills);
   emit("project");
   emit("seek");
 }
@@ -112,12 +115,6 @@ async function newProject() {
 }
 $("#new-project").addEventListener("click", newProject);
 
-const askAgent = (text) => {
-  const box = $("#prompt");
-  if (text) box.value = text;
-  box.focus();
-};
-$("#empty-ask").addEventListener("click", () => askAgent("Make a 15 second cut from my clips, put the music under it and add a title"));
 const files = $("#file-input");
 files.addEventListener("change", async () => {
   await addFiles([...files.files]);
@@ -148,7 +145,7 @@ on("play", () => ($("#play").textContent = S.playing ? "❚❚" : "▶"));
 (async () => {
   try {
     const me = await api("/api/me");
-    Object.assign(S, { assets: me.assets, projects: me.projects, model: me.model });
+    Object.assign(S, { assets: me.assets, projects: me.projects });
     let pid = localStorage.getItem("agentcut.project");
     if (!me.projects.some((p) => p.id === pid)) pid = me.projects[0]?.id;
     if (!pid) pid = (await post("/api/projects", { name: "My first video" })).id;

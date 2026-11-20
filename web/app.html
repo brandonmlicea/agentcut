@@ -12,18 +12,29 @@
 </head>
 <body>
 <div class="app">
-  <aside class="chat" id="chat">
+  <aside class="chat" id="agent">
     <header class="chat-head">
       <button class="avatar" id="account" title="Account">A<i></i></button>
       <button class="brand-pill" id="project-pill" title="Projects"><img src="/mark.svg" alt=""><span id="project-name">AgentCut</span><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
       <button class="icon-btn" id="new-project" title="New project"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     </header>
-    <div class="chat-log" id="chat-log"></div>
-    <div class="chat-context" id="chat-context"></div>
-    <form class="composer" id="composer">
-      <textarea id="prompt" rows="1" placeholder="Ask the agent to cut, speed up, mute…"></textarea>
-      <button class="press send" id="send" title="Send"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    </form>
+    <div class="agent-scroll">
+      <section class="agent-intro">
+        <h2>You do everything yourself.</h2>
+        <p>Cut, trim, grade and score by hand on the right. When you want help, bring your own agent over MCP: name a moment like &ldquo;0:15 to 0:17&rdquo; and it sees those frames, every layer, effect and keyframe, then edits while you watch.</p>
+        <div id="agent-connect"><button class="press" id="agent-key">Connect an agent</button></div>
+      </section>
+      <section class="agent-say">
+        <h4>Say it with times</h4>
+        <ul>
+          <li>&ldquo;Look at 0:15 to 0:17 and give the ending that same look.&rdquo;</li>
+          <li>&ldquo;Cut at 0:30 and fade the music out over the last two seconds.&rdquo;</li>
+          <li>&ldquo;Put a title over 0:02 to 0:05 that reads Launch day.&rdquo;</li>
+        </ul>
+      </section>
+      <h4 class="agent-head">What your agent changed</h4>
+      <div class="chat-log" id="agent-log"></div>
+    </div>
   </aside>
   <main class="desk" id="desk">
     <nav class="dock" id="dock">
@@ -34,7 +45,6 @@
       <button data-tab="look" title="Look and contrast"><span class="tile t-look"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="#fff" stroke-width="2"/><path d="M12 5a7 7 0 0 1 0 14z" fill="#fff"/></svg></span></button>
       <hr>
       <button data-tab="export" title="Export"><span class="tile t-export"><svg viewBox="0 0 24 24"><path d="M12 15V5M8 9l4-4 4 4M6 15v3h12v-3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
-      <button data-tab="mcp" title="MCP for other agents"><span class="tile t-mcp"><svg viewBox="0 0 24 24"><path d="M9 4v4M15 4v4M7 8h10v3a5 5 0 0 1-10 0zM12 16v4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
     </nav>
     <section class="win" id="editor">
       <header class="win-head">
@@ -48,8 +58,8 @@
             <div class="stage-empty" id="stage-empty" hidden>
               <span class="tile t-media"><svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.6l1.8 2h7.6a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="#fff"/></svg></span>
               <h3>Start your video</h3>
-              <p>Upload footage, music or images, then edit by hand or ask your agent to build the cut.</p>
-              <span><button class="press" id="empty-upload">Upload media</button> <button class="soft" id="empty-ask">Ask your agent to make a cut</button></span>
+              <p>You do everything yourself: upload footage, music or images and cut them here, or connect your agent over MCP and it builds the cut while you watch.</p>
+              <span><button class="press" id="empty-upload">Upload media</button> <button class="soft" id="empty-connect">Connect an agent</button></span>
             </div>
           </div>
           <div class="transport" id="transport">

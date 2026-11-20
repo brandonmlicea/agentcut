@@ -18,8 +18,3 @@ migrations_dir = "migrations"
 [[r2_buckets]]
 binding = "MEDIA"
 bucket_name = "agentcut"
-
-[[services]]
-binding = "STAR"
-service = "star"
-entrypoint = "ScaffoldBridge"

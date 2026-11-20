@@ -30,6 +30,29 @@ fn key(user: &str, asset: &str) -> String {
     format!("u/{user}/{asset}")
 }
 
+fn frames(user: &str, asset: &str) -> String {
+    format!("f/{user}/{asset}/")
+}
+
+pub async fn frame(bucket: &Bucket, user: &str, asset: &str, second: u32) -> Result<Option<Vec<u8>>> {
+    match bucket.get(format!("{}{second}", frames(user, asset))).execute().await? {
+        Some(object) => Ok(Some(object.body().ok_or("empty frame")?.bytes().await?)),
+        None => Ok(None),
+    }
+}
+
+pub async fn put_frame(db: &D1Database, bucket: &Bucket, user: &str, asset: &str, second: u32, bytes: Vec<u8>) -> Result<Response> {
+    let owned: Option<String> = db.prepare("SELECT id FROM assets WHERE id = ?1 AND user_id = ?2").bind(&[asset.into(), user.into()])?.first(Some("id")).await?;
+    if owned.is_none() {
+        return Response::error("Not found", 404);
+    }
+    if bytes.len() > 300_000 || !bytes.starts_with(&[0xff, 0xd8]) {
+        return Response::error("A frame is one JPEG under 300 KB.", 400);
+    }
+    bucket.put(format!("{}{second}", frames(user, asset)), Data::Bytes(bytes)).http_metadata(HttpMetadata { content_type: Some("image/jpeg".into()), ..Default::default() }).execute().await?;
+    Response::from_json(&serde_json::json!({ "ok": true }))
+}
+
 pub async fn list(db: &D1Database, user: &str) -> Result<Vec<Asset>> {
     db.prepare("SELECT id, name, kind, mime, size, duration, width, height, created FROM assets WHERE user_id = ?1 ORDER BY created DESC")
         .bind(&[user.into()])?
@@ -154,6 +177,9 @@ pub async fn serve(db: &D1Database, bucket: &Bucket, user: &str, asset: &str, re
 
 pub async fn remove(db: &D1Database, bucket: &Bucket, user: &str, asset: &str) -> Result<()> {
     bucket.delete(key(user, asset)).await?;
+    for object in bucket.list().prefix(frames(user, asset)).execute().await?.objects() {
+        bucket.delete(object.key()).await?;
+    }
     db.prepare("DELETE FROM assets WHERE id = ?1 AND user_id = ?2").bind(&[asset.into(), user.into()])?.run().await?;
     Ok(())
 }

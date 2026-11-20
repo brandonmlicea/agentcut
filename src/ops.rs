@@ -324,18 +324,23 @@ fn run(project: &mut Project, op: Op, assets: &HashMap<String, AssetInfo>, made:
 pub fn apply(project: &mut Project, ops: &[Value], assets: &HashMap<String, AssetInfo>) -> Outcome {
     let mut out = Outcome::default();
     let mut made = HashSet::new();
-    for (i, raw) in ops.iter().enumerate() {
-        let name = raw.get("op").and_then(Value::as_str).unwrap_or("?").to_string();
-        if name == "add_clip" || name == "update_clip" {
-            let extra: Vec<&String> = raw.as_object().map(|o| o.keys().filter(|k| !PATCH_KEYS.contains(&k.as_str())).collect()).unwrap_or_default();
-            if !extra.is_empty() {
-                out.errors.push(format!("op {i} {name}: ignored unknown fields {extra:?}"));
+    for (i, given) in ops.iter().enumerate() {
+        let expanded = match crate::moment::normalize(project, given.clone()) {
+            Ok(v) => v,
+            Err(e) => (out.errors.push(format!("op {i}: {e}")), vec![]).1,
+        };
+        for raw in &expanded {
+            let name = raw.get("op").and_then(Value::as_str).unwrap_or("?").to_string();
+            if name == "add_clip" || name == "update_clip" {
+                let extra: Vec<&String> = raw.as_object().map(|o| o.keys().filter(|k| !PATCH_KEYS.contains(&k.as_str())).collect()).unwrap_or_default();
+                if !extra.is_empty() {
+                    out.errors.push(format!("op {i} {name}: ignored unknown fields {extra:?}"));
+                }
             }
-        }
-        let result = serde_json::from_value::<Op>(raw.clone()).map_err(|e| e.to_string()).and_then(|op| run(project, op, assets, &mut made, &mut out));
-        match result {
-            Ok(msg) => out.done.push(msg),
-            Err(e) => out.errors.push(format!("op {i} {name}: {e}")),
+            match serde_json::from_value::<Op>(raw.clone()).map_err(|e| e.to_string()).and_then(|op| run(project, op, assets, &mut made, &mut out)) {
+                Ok(msg) => out.done.push(msg),
+                Err(e) => out.errors.push(format!("op {i} {name}: {e}")),
+            }
         }
     }
     project.tracks.retain(|t| !t.clips.is_empty() || made.contains(&t.id));

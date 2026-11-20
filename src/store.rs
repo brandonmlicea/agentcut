@@ -57,6 +57,10 @@ pub async fn remove(db: &D1Database, user: &str, project: &str) -> Result<()> {
     Ok(())
 }
 
+pub async fn stamp(db: &D1Database, user: &str, project: &str) -> Result<Option<f64>> {
+    db.prepare("SELECT updated FROM projects WHERE id = ?1 AND user_id = ?2").bind(&[project.into(), user.into()])?.first(Some("updated")).await
+}
+
 pub async fn messages(db: &D1Database, project: &str, limit: u32) -> Result<Vec<Message>> {
     let mut rows: Vec<Message> = db
         .prepare("SELECT role, content, meta, created FROM messages WHERE project_id = ?1 ORDER BY id DESC LIMIT ?2")

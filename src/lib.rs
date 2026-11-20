@@ -1,14 +1,14 @@
-mod agent;
 mod auth;
 mod contrast;
 mod mcp;
 mod media;
 mod model;
+mod moment;
 mod ops;
 mod store;
-mod util;
 #[cfg(test)]
 mod tests;
+mod util;
 
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -26,7 +26,7 @@ const STATIC: [(&str, &str, &str); 10] = [
     ("/js/timeline.js", "text/javascript", include_str!("../web/js/timeline.js")),
     ("/js/panels.js", "text/javascript", include_str!("../web/js/panels.js")),
     ("/js/inspector.js", "text/javascript", include_str!("../web/js/inspector.js")),
-    ("/js/chat.js", "text/javascript", include_str!("../web/js/chat.js")),
+    ("/js/agent.js", "text/javascript", include_str!("../web/js/agent.js")),
 ];
 
 fn page(body: &str, kind: &str) -> Result<Response> {
@@ -105,7 +105,7 @@ async fn route(mut req: Request, env: &Env, db: &D1Database, user: &str, url: &U
     let parts: Vec<&str> = path.trim_matches('/').split('/').collect();
     match (method, parts.as_slice()) {
         (Method::Get, [""] | ["app"]) => page(APP, "text/html"),
-        (Method::Get, ["api", "me"]) => Response::from_json(&json!({ "projects": store::list(db, user).await?, "assets": media::list(db, user).await?, "model": agent::MODEL })),
+        (Method::Get, ["api", "me"]) => Response::from_json(&json!({ "projects": store::list(db, user).await?, "assets": media::list(db, user).await? })),
         (Method::Post, ["api", "projects"]) => {
             let body: Value = req.json().await.unwrap_or_default();
             let id = store::create(db, user, body["name"].as_str().map(str::to_string)).await?;
@@ -139,15 +139,21 @@ async fn route(mut req: Request, env: &Env, db: &D1Database, user: &str, url: &U
                 None => Response::error("Not found", 404),
             }
         }
-        (Method::Post, ["api", "projects", pid, "chat"]) => {
-            let ask: agent::Ask = req.json().await?;
-            if ask.message.trim().is_empty() {
-                return bad("Say what to change.");
+        (Method::Get, ["api", "projects", pid, "stamp"]) => Response::from_json(&json!({ "updated": store::stamp(db, user, pid).await? })),
+        (Method::Get, ["api", "assets", aid, "frames", sec]) => match media::frame(&bucket, user, aid, sec.parse().unwrap_or(0)).await? {
+            Some(bytes) => {
+                let headers = Headers::new();
+                headers.set("content-type", "image/jpeg")?;
+                headers.set("cache-control", "private, max-age=86400")?;
+                Ok(Response::from_bytes(bytes)?.with_headers(headers))
             }
-            match agent::chat(env, db, &bucket, user, pid, ask).await? {
-                Some(out) => Response::from_json(&out),
-                None => Response::error("Not found", 404),
-            }
+            None => Response::error("Not found", 404),
+        },
+        (Method::Put, ["api", "assets", aid, "frames", sec]) => {
+            let Ok(sec) = sec.parse::<u32>() else {
+                return bad("A frame is a whole second.");
+            };
+            media::put_frame(db, &bucket, user, aid, sec, req.bytes().await?).await
         }
         (Method::Get, ["api", "assets"]) => Response::from_json(&media::list(db, user).await?),
         (Method::Put, ["api", "assets"]) => media::upload(db, &bucket, user, &req).await,

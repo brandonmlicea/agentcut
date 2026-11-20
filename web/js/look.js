@@ -91,22 +91,3 @@ export function exporter() {
   };
   return h("div", { className: "pane", id: "pane-export" }, h("h2", {}, "Export"), stats(), status, h("div", { className: "progress" }, bar), h("button", { className: "press", onclick: go }, "Export video"), link, h("p", { className: "muted" }, "The edit plays once with its sound to make the file: MP4 where the browser can, otherwise WebM."));
 }
-
-export function mcp() {
-  const out = h("div");
-  const make = async () => {
-    const r = await post("/api/mcp-key", {});
-    const cli = `claude mcp add --transport http agentcut ${r.url} --header "Authorization: Bearer ${r.key}"`;
-    const json = JSON.stringify({ mcpServers: { agentcut: { type: "http", url: r.url, headers: { Authorization: `Bearer ${r.key}` } } } }, null, 2);
-    const copy = (t) => h("button", { className: "soft", onclick: () => navigator.clipboard.writeText(t).then(() => toast("Copied")) }, "Copy");
-    out.replaceChildren(section("Claude Code", h("pre", {}, cli), copy(cli)), section("Any MCP client", h("pre", {}, json), copy(json)), h("p", { className: "muted" }, "This key is shown once. Making a new one turns this one off."));
-  };
-  return h(
-    "div",
-    { className: "pane", id: "pane-mcp" },
-    h("h2", {}, "MCP"),
-    h("p", { className: "muted" }, "Let any agent edit your videos. One tool, edit_video, reads the timeline and applies cuts, speed, mutes, keyframes, music, effects and layers; check_contrast checks text colours."),
-    h("button", { className: "press", onclick: make }, "Make an MCP key"),
-    out,
-  );
-}
