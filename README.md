@@ -2,6 +2,8 @@
 
 A video editor where you do everything yourself, MCP first. The editor fills the right: media, a layered timeline, keyframes, music, effects, speed and mute. The left is your own agent's seat: connect it over MCP, and what it changes shows up there while the editor follows it live. There is no model inside AgentCut. One Rust Worker serves everything: https://agentcut.brandonlicea61.workers.dev
 
+Open source under the MIT license (`LICENSE`): https://github.com/brandonmlicea/agentcut. To run your own, make a D1 database and an R2 bucket named `agentcut`, put the database id in `wrangler.toml`, apply `migrations/` and `wrangler deploy`. [Paper Mache](https://github.com/brandonmlicea/papermache) renders product CGI in Rust and sends its clips straight onto an AgentCut timeline.
+
 ## How it fits together
 
 - `src/` is the whole server, in Rust (`worker` 0.8, built by `worker-build` 0.8.5):
